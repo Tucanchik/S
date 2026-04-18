@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steam Client Security PoC</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1b2838; color: #c7d5e0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; border: 1px solid #2a475e; padding: 20px; border-radius: 8px; background: #16202d; }
+        h1 { color: #66c0f4; border-bottom: 1px solid #2a475e; padding-bottom: 10px; }
+        .info { background: #2a475e; padding: 15px; border-radius: 4px; margin: 20px 0; font-family: monospace; }
+        .status { color: #a34c4c; font-weight: bold; }
+        .btn { background: #5c7e10; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 2px; font-size: 16px; }
+        .btn:hover { background: #7ba415; }
+        .warning { color: #ffcc00; font-size: 0.9em; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Steam Client Environment Analysis</h1>
+        <p>This page is a Proof of Concept (PoC) for a reported vulnerability.</p>
+        
+        <div class="info">
+            <strong>User Agent:</strong> <br>
+            <span id="ua-string">Detecting...</span>
+        </div>
+
+        <div class="info">
+            <strong>Chromium Engine Status:</strong> <br>
+            <span id="ver-status">Checking...</span>
+        </div>
+
+        <h3>Stability & Memory Test</h3>
+        <p>Clicking the button below will trigger a memory pressure test to verify engine stability in this environment.</p>
+        <button class="btn" onclick="triggerTest()">Run Memory Pressure Test</button>
+        <p class="warning">Note: This may cause the browser tab to freeze or crash if the environment is unstable.</p>
+    </div>
+
+    <script>
+        // Отображаем User Agent
+        const ua = navigator.userAgent;
+        document.getElementById('ua-string').innerText = ua;
+
+        // Простая проверка версии (ищем Chromium/XX)
+        const match = ua.match(/Chromium\/([0-9]+)\./);
+        if (match) {
+            const version = parseInt(match[1]);
+            const statusText = document.getElementById('ver-status');
+            if (version < 130) {
+                statusText.innerHTML = `<span class="status">OUTDATED (v${version})</span> - Potential RCE vector confirmed.`;
+            } else {
+                statusText.innerText = `Up to date (v${version})`;
+            }
+        }
+
+        function triggerTest() {
+            console.log("Starting pressure test...");
+            alert("Starting test. If the client crashes, it confirms memory corruption potential.");
+            
+            // Тест на переполнение буфера и давление на JIT
+            try {
+                let storage = [];
+                for (let i = 0; i < 20000; i++) {
+                    let buffer = new ArrayBuffer(1024 * 1024); // 1MB
+                    let view = new BigInt64Array(buffer);
+                    for (let j = 0; j < view.length; j++) {
+                        view[j] = BigInt(i + j);
+                    }
+                    storage.push(buffer);
+                    if (i % 100 === 0) console.log(`Allocated ${i} MB`);
+                }
+            } catch (e) {
+                console.error("Test caught by engine: ", e);
+                alert("The engine handled the memory pressure. Try combining this with a specific V8 exploit.");
+            }
+        }
+    </script>
+</body>
+</html>
